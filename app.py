@@ -3,27 +3,19 @@ import sqlite3
 from datetime import datetime
 from flask import Flask, request, redirect, url_for, render_template_string, flash
 
-# -----------------------
-# CONFIG
-# -----------------------
+# ---------------- CONFIG ----------------
 APP_TITLE = "Coastal Gloss Booking"
 
-# Database path (works on Render + local)
+# Use /tmp on Render, local file when testing locally
 if os.name == "nt":
     DB_PATH = os.path.join(os.path.dirname(__file__), "bookings.db")
 else:
     DB_PATH = os.path.join(os.environ.get("DATA_DIR", "/tmp"), "bookings.db")
 
-# -----------------------
-# APP SETUP
-# -----------------------
 app = Flask(__name__)
-app.secret_key = "super-secret-key-change-me"
+app.secret_key = "coastal-gloss-secret-key"
 
-
-# -----------------------
-# DATABASE SETUP
-# -----------------------
+# ---------------- DATABASE ----------------
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -49,26 +41,17 @@ def init_db():
         """)
 
 
-# Run DB setup on startup
-init_db()
+# Ensure DB always exists (important for Render)
+@app.before_request
+def ensure_db():
+    init_db()
 
 
-# -----------------------
-# ROUTES
-# -----------------------
+# ---------------- ROUTES ----------------
 
 @app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
-        name = request.form["name"]
-        phone = request.form["phone"]
-        vehicle = request.form["vehicle"]
-        service = request.form["service_type"]
-        location = request.form["location_type"]
-        date = request.form["date"]
-        slot = request.form["slot"]
-        notes = request.form.get("notes", "")
-
         with get_db() as db:
             db.execute("""
                 INSERT INTO bookings 
@@ -76,17 +59,24 @@ def home():
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 datetime.now().isoformat(),
-                name, phone, vehicle, service, location, date, slot, notes, "New"
+                request.form["name"],
+                request.form["phone"],
+                request.form["vehicle"],
+                request.form["service_type"],
+                request.form["location_type"],
+                request.form["date"],
+                request.form["slot"],
+                request.form.get("notes", ""),
+                "New"
             ))
-
         flash("Booking submitted successfully!")
         return redirect("/")
 
     return render_template_string("""
-    <h2>Coastal Gloss Booking</h2>
+    <h1>Coastal Gloss Booking</h1>
     <form method="post">
-        <input name="name" placeholder="Full Name" required><br><br>
-        <input name="phone" placeholder="Phone Number" required><br><br>
+        <input name="name" placeholder="Name" required><br><br>
+        <input name="phone" placeholder="Phone" required><br><br>
         <input name="vehicle" placeholder="Vehicle" required><br><br>
 
         <label>Service</label><br>
@@ -116,7 +106,7 @@ def home():
         <button type="submit">Book Now</button>
     </form>
     """)
-    
+
 
 @app.route("/admin")
 def admin():
@@ -125,13 +115,10 @@ def admin():
 
     html = "<h1>Admin Panel</h1><ul>"
     for b in bookings:
-        html += f"<li><b>{b['name']}</b> – {b['date']} {b['slot']} – {b['service_type']}</li>"
+        html += f"<li><b>{b['name']}</b> — {b['date']} {b['slot']} ({b['service_type']})</li>"
     html += "</ul>"
     return html
 
 
-# -----------------------
-# RUN APP
-# -----------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
