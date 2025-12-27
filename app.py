@@ -12,7 +12,12 @@ except Exception:
     Client = None
 
 APP_TITLE = "Coastal Gloss — Internal Booking"
-DB_PATH = os.path.join(os.path.dirname(__file__), "bookings.db")
+# Use writable path for Render
+if os.name == "nt":
+    DB_PATH = os.path.join(os.path.dirname(__file__), "bookings.db")
+else:
+    DB_PATH = os.path.join(os.environ.get("DATA_DIR", "/tmp"), "bookings.db")
+
 
 TIME_SLOTS = ["09:00", "12:00", "15:00"]  # 9am, 12pm, 3pm (24h format)
 SERVICE_DETAIL = "Mobile Detail (3 hours)"
@@ -432,3 +437,4 @@ def set_status():
 if __name__ == "__main__":
     init_db()
     app.run(host="127.0.0.1", port=5000, debug=True)
+
