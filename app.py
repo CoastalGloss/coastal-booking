@@ -26,7 +26,8 @@ def init_db():
             location TEXT,
             date TEXT,
             time TEXT,
-            notes TEXT
+            notes TEXT,
+            created_at TEXT
         )
         """)
 
@@ -39,8 +40,8 @@ def booking():
         with get_db() as db:
             db.execute("""
                 INSERT INTO bookings
-                (name, phone, vehicle, service, location, date, time, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (name, phone, vehicle, service, location, date, time, notes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 request.form["name"],
                 request.form["phone"],
@@ -49,73 +50,72 @@ def booking():
                 request.form["location"],
                 request.form["date"],
                 request.form["time"],
-                request.form.get("notes", "")
+                request.form.get("notes", ""),
+                datetime.now().isoformat()
             ))
         return "<h2>Booking submitted successfully!</h2><p>You may close this window.</p>"
 
     return render_template_string("""
     <h1>Coastal Gloss Booking</h1>
     <form method="post">
-        <input name="name" placeholder="Full Name" required><br><br>
-        <input name="phone" placeholder="Phone Number" required><br><br>
-        <input name="vehicle" placeholder="Vehicle" required><br><br>
+        <label>Name</label><br>
+        <input name="name" required><br><br>
 
-        <label>Service</label>
+        <label>Phone</label><br>
+        <input name="phone" required><br><br>
+
+        <label>Vehicle</label><br>
+        <input name="vehicle" required><br><br>
+
+        <label>Service</label><br>
         <select name="service">
-            <option>Exterior Detail</option>
-            <option>Interior Detail</option>
-            <option>Full Detail</option>
-            <option>1-Year Ceramic</option>
-            <option>2-Year Ceramic</option>
+            <option>Exterior Detail - $105</option>
+            <option>Interior Detail - $165</option>
+            <option>Full Detail - $299</option>
+            <option>1 Year Ceramic - $499</option>
+            <option>2 Year Ceramic - $749</option>
+            <option>5 Year Ceramic - $1499</option>
         </select><br><br>
 
-        <label>Location</label>
+        <label>Location</label><br>
         <select name="location">
             <option>Mobile</option>
             <option>Drop-Off</option>
         </select><br><br>
 
-        <label>Date</label>
+        <label>Date</label><br>
         <input type="date" name="date" required><br><br>
 
-        <label>Time</label>
+        <label>Time</label><br>
         <select name="time">
             <option>9:00 AM</option>
             <option>12:00 PM</option>
             <option>3:00 PM</option>
         </select><br><br>
 
-        <label>Notes</label>
+        <label>Notes</label><br>
         <textarea name="notes"></textarea><br><br>
 
         <button type="submit">Book Appointment</button>
     </form>
     """)
 
-# ---------------- CALENDAR VIEW ----------------
-@app.route("/calendar")
-def calendar():
+# ---------------- ADMIN PANEL ----------------
+@app.route("/admin")
+def admin():
     with get_db() as db:
-        rows = db.execute("""
-            SELECT * FROM bookings
-            ORDER BY date ASC, time ASC
-        """).fetchall()
+        rows = db.execute("SELECT * FROM bookings ORDER BY date, time").fetchall()
 
-    html = "<h1>Booking Calendar</h1>"
-
-    current_date = None
+    html = "<h1>Admin Dashboard</h1>"
     for r in rows:
-        if r["date"] != current_date:
-            html += f"<h2>{r['date']}</h2>"
-            current_date = r["date"]
-
         html += f"""
-        <div style='margin-left:20px; padding:8px; border-bottom:1px solid #ddd'>
-            <b>{r['time']}</b> — {r['name']} ({r['service']})<br>
-            {r['vehicle']} | {r['location']}
+        <div style='border:1px solid #ccc; padding:10px; margin-bottom:10px'>
+            <strong>{r['name']}</strong> — {r['service']}<br>
+            {r['date']} @ {r['time']}<br>
+            {r['vehicle']} | {r['location']}<br>
+            <em>{r['notes']}</em>
         </div>
         """
-
     return html
 
 
